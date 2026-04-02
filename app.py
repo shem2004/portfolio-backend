@@ -43,22 +43,18 @@ MY_EMAIL = os.getenv("EMAIL_USER")
 MY_APP_PASSWORD = os.getenv("EMAIL_PASS")
 
 # --- 1. SECURE CORS CONFIGURATION ---
-# Kunin ang string mula sa Render (Environment Variable)
-origins_raw = os.getenv("ALLOWED_ORIGINS", "")
+origins_raw = os.getenv("ALLOWED_ORIGINS", "*") # Gawing "*" ang default para hindi ma-block agad
 
-# Siguraduhin na listahan ang ibabato natin sa middleware
-if origins_raw:
-    # Paghiwalayin gamit ang comma at tanggalin ang spaces
+if origins_raw and origins_raw != "*":
     ALLOWED_ORIGINS = [origin.strip() for origin in origins_raw.split(",")]
 else:
-    # Kung walang nakuha sa environment, i-allow ang lahat (para hindi mag-fail ang connect)
     ALLOWED_ORIGINS = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS, 
     allow_credentials=True,
-    allow_methods=["*"], # Mas safe na "*" muna para i-allow ang OPTIONS request ng Vercel
+    allow_methods=["*"], 
     allow_headers=["*"],
 )
 
