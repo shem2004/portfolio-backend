@@ -94,7 +94,7 @@ class ProjectCreate(BaseModel):
     image_url: str
     category: str
 
-# --- EMAIL LOGIC MAY TIMEOUT ---
+# --- EMAIL LOGIC MAY TIMEOUT AT NAKA-SSL (PORT 465) ---
 def send_email_notification(sender_name, sender_email, message_content):
     try:
         msg = MIMEMultipart()
@@ -115,9 +115,8 @@ def send_email_notification(sender_name, sender_email, message_content):
         """
         msg.attach(MIMEText(body, 'plain'))
 
-        # FIX 1: Nagdagdag ng timeout (10s) para hindi mag-hang ang server
-        server = smtplib.SMTP('smtp.gmail.com', 587, timeout=10)
-        server.starttls()  
+        # DITO TAYO MAGBABAGO: Gumamit ng SMTP_SSL at Port 465
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=15)
         server.login(MY_EMAIL, MY_APP_PASSWORD)
         server.send_message(msg)
         server.quit()
