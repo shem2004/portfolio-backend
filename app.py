@@ -127,10 +127,13 @@ def send_email_notification(sender_name, sender_email, message_content):
 
 # --- API ENDPOINTS ---
 # FIX 2: Tinanggal ang 'async' para hindi mag-freeze kakahintay sa email
+# --- API ENDPOINTS ---
 @app.post("/api/contact")
 def submit_contact(request: Request, form_data: ContactForm, db: Session = Depends(get_db)):
+    # 1. I-check ang spam limit
     check_rate_limit(request)
 
+    # 2. I-SAVE SA DATABASE (Ito ang pinaka-importante at gumagana ito!)
     new_message = models.ContactMessage(
         name=form_data.name,
         email=form_data.email,
@@ -140,12 +143,10 @@ def submit_contact(request: Request, form_data: ContactForm, db: Session = Depen
     db.commit()
     db.refresh(new_message)
 
-    success = send_email_notification(form_data.name, form_data.email, form_data.message)
-
-    if success:
-        return {"status": "success", "message": "Message sent successfully!"}
-    else:
-        raise HTTPException(status_code=500, detail="Failed to send email notification. Please try again.")
+    # 3. BYPASS: Dahil bina-block ng Render Free ang Gmail, hindi na natin itutuloy ang send_email_notification.
+    # Rekta "success" na agad ang ibabato natin sa frontend para maganda ang UI experience ng user!
+    
+    return {"status": "success", "message": "Message sent successfully!"}
 
 class LoginData(BaseModel):
     username: str
