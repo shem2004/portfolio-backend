@@ -132,17 +132,15 @@ def submit_contact(request: Request, form_data: ContactForm, db: Session = Depen
         name=form_data.name,
         email=form_data.email,
         message=form_data.message
-    )
+      )
     db.add(new_message)
     db.commit()
     db.refresh(new_message)
 
-    success = send_email_notification(form_data.name, form_data.email, form_data.message)
+    # BURAHIN O I-COMMENT ANG LINE NA ITO:
+    # success = send_email_notification(form_data.name, form_data.email, form_data.message)
 
-    if success:
-        return {"status": "success", "message": "Message sent successfully!"}
-    else:
-        raise HTTPException(status_code=500, detail="Failed to send email notification. Please try again.")
+    return {"status": "success", "message": "Data saved to database!"}
 
 class LoginData(BaseModel):
     username: str
