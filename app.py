@@ -110,6 +110,7 @@ def send_email_notification(sender_name, sender_email, message_content):
             "from_name": "SΛIΛH Portfolio"
         }
         
+        # Ganito dapat ang itsura ng request part mo:
         data = json.dumps(payload).encode('utf-8')
         req = urllib.request.Request(url, data=data, headers={
             'Content-Type': 'application/json',
