@@ -94,7 +94,6 @@ class ProjectCreate(BaseModel):
     image_url: str
     category: str
 
-# --- EMAIL LOGIC (ORIGINAL GMAIL SETUP MO) ---
 def send_email_notification(sender_name, sender_email, message_content):
     try:
         msg = MIMEMultipart()
@@ -102,22 +101,11 @@ def send_email_notification(sender_name, sender_email, message_content):
         msg['To'] = MY_EMAIL  
         msg['Subject'] = f"New Portfolio Message from {sender_name}"
 
-        body = f"""
-        You have received a new message from your Portfolio Website!
-
-        --------------------------------------
-        Name:    {sender_name}
-        Email:   {sender_email}
-        --------------------------------------
-        
-        Message:
-        {message_content}
-        """
+        body = f"Name: {sender_name}\nEmail: {sender_email}\n\nMessage:\n{message_content}"
         msg.attach(MIMEText(body, 'plain'))
 
-        # BUMALIK TAYO SA ORIGINAL MONG CODE: Port 587 at starttls()
-        server = smtplib.SMTP('smtp.gmail.com', 587, timeout=15)
-        server.starttls()  
+        # PALITAN ITO: Gamitin ang SMTP_SSL at Port 465
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=15)
         server.login(MY_EMAIL, MY_APP_PASSWORD)
         server.send_message(msg)
         server.quit()
