@@ -1,15 +1,14 @@
 import jwt
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import smtplib
 import os 
 from dotenv import load_dotenv 
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 import time
+import urllib.request
+import json
 
 # --- IMPORTS PARA SA DATABASE ---
 import models
@@ -34,9 +33,6 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="SΛIΛH Portfolio API")
-
-MY_EMAIL = os.getenv("EMAIL_USER")
-MY_APP_PASSWORD = os.getenv("EMAIL_PASS")
 
 # --- 1. SECURE CORS CONFIGURATION ---
 origins_raw = os.getenv("ALLOWED_ORIGINS", "*") 
@@ -67,7 +63,6 @@ RATE_LIMIT = 5
 TIME_WINDOW = 86400 
 
 def check_rate_limit(request: Request):
-    # Kapag nasa Render, kailangan nating kunin ang tunay na IP ng user sa headers
     forwarded = request.headers.get("x-forwarded-for")
     client_ip = forwarded.split(",")[0] if forwarded else request.client.host
     current_time = time.time()
@@ -94,33 +89,44 @@ class ProjectCreate(BaseModel):
     image_url: str
     category: str
 
+# --- ETO LANG ANG BINAGO NATIN: Gumamit tayo ng HTTP Request imbes na SMTP ---
 def send_email_notification(sender_name, sender_email, message_content):
     try:
-        msg = MIMEMultipart()
-        msg['From'] = MY_EMAIL
-        msg['To'] = MY_EMAIL  
-        msg['Subject'] = f"New Portfolio Message from {sender_name}"
+        url = "https://api.web3forms.com/submit"
+        
+        # Kukunin ang key mula sa Render Env Vars
+        web3_key = os.getenv("WEB3FORMS_KEY")
+        
+        if not web3_key:
+            print("Missing WEB3FORMS_KEY in environment variables.")
+            return False
 
-        body = f"Name: {sender_name}\nEmail: {sender_email}\n\nMessage:\n{message_content}"
-        msg.attach(MIMEText(body, 'plain'))
-
-        # PALITAN ITO: Gamitin ang SMTP_SSL at Port 465
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=15)
-        server.login(MY_EMAIL, MY_APP_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        return True
+        payload = {
+            "access_key": web3_key,
+            "name": sender_name,
+            "email": sender_email,
+            "message": message_content,
+            "subject": f"New Portfolio Message from {sender_name}",
+            "from_name": "SΛIΛH Portfolio"
+        }
+        
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers={
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        })
+        
+        with urllib.request.urlopen(req) as response:
+            return response.getcode() == 200
     except Exception as e:
-        print(f"Email error: {e}") 
+        print(f"API Email error: {e}")
         return False
 
 # --- API ENDPOINTS ---
 @app.post("/api/contact")
 def submit_contact(request: Request, form_data: ContactForm, db: Session = Depends(get_db)):
-    # 1. I-check ang spam limit
     check_rate_limit(request)
 
-    # 2. I-SAVE SA DATABASE
     new_message = models.ContactMessage(
         name=form_data.name,
         email=form_data.email,
@@ -130,7 +136,6 @@ def submit_contact(request: Request, form_data: ContactForm, db: Session = Depen
     db.commit()
     db.refresh(new_message)
 
-    # 3. ORIGINAL NA PROSESO: Mag-e-error kapag hindi na-send sa Gmail
     success = send_email_notification(form_data.name, form_data.email, form_data.message)
 
     if success:
